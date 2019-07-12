@@ -1,0 +1,12 @@
+#-------------MAIN PARAMS--------------------
+main.log_dir = "./logdir"
+
+#-------------MODEL PARAMS--------------------
+LipNext.input_dim = 256
+LipNext.nclasses = 5
+LipNext.frameLen = 29
+LipNext.alpha = 2
+LipNext.se_block = True
+LipNext.temporal_attention = True
+
+
