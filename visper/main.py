@@ -6,6 +6,7 @@ from catalyst.dl import SupervisedRunner
 
 from models import LipNext
 from data.dataset import LipreadingDataset
+from utils import add_external_configurables
 
 @gin.configurable
 def main(
@@ -47,6 +48,7 @@ def main(
             shuffle=True,
             num_workers=num_workers,
             drop_last=True),
+
         "valid": DataLoader(
             valid_dataset,
             batch_size=val_batch_size_multiplier*batch_size,
@@ -57,7 +59,9 @@ def main(
 
     # model, criterion, optimizer
     model = LipNext()
-    criterion = torch.nn.CrossEntropyLoss()
+
+    # TODO: add class weigths computation
+    criterion = torch.nn.CrossEntropyLoss(weight=None)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer)
 
@@ -79,8 +83,6 @@ def main(
 
 if __name__ == "__main__":
     gin.parse_config_file("config.gin", skip_unknown=False)
+    init_gin_configuration()
 
     model = LipNext()
-
-    print(model.frameLen)
-    print(model.nClasses)

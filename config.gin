@@ -1,5 +1,22 @@
 #-------------MAIN PARAMS--------------------
+# directories
 main.log_dir = "./logdir"
+main.dataset_dir = ""
+
+# training
+main.num_epochs = 40
+main.batch_size = 38
+main.lr = 1e-3
+main.val_batch_size_multiplier = 2
+main.weight_decay = 0
+
+# data
+main.num_labels = 5
+main.augment = True
+
+# misc
+main.num_workers = 4
+
 
 #-------------MODEL PARAMS--------------------
 LipNext.input_dim = 256
