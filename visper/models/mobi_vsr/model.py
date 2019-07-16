@@ -59,7 +59,7 @@ class ResNet(nn.Module):
         return x
 
 
-@gin.configurable
+@gin.configurable(blacklist=["class_weight"])
 class LipNext(nn.Module):
     def __init__(self, input_dim=256, nclasses=500, frame_len=29, alpha=2, class_weight=None, se_block=False, temporal_attention=False):
         super(LipNext, self).__init__()
@@ -107,10 +107,6 @@ class LipNext(nn.Module):
         # initialize
         self._initialize_weights()
 
-        if weight is not None:
-            weight = torch.tensor(weight, dtype=torch.float32)
-        self.loss = nn.CrossEntropyLoss(weight=weight)
-
     def forward(self, x):
         x = self.frontend3D(x)
         
@@ -137,7 +133,10 @@ class LipNext(nn.Module):
         x = self.backend_conv2(x)
         # x = x.view(-1, self.nClasses)
 
-        return x, alignment
+        if self.temporal_attention:
+            return x, alignment
+        else:
+            return x
 
     def _initialize_weights(self):
         for m in self.modules():
@@ -161,17 +160,12 @@ class LipNext(nn.Module):
         return count
 
 
-def lipnext(inputDim=256, hiddenDim=512, nClasses=500, frameLen=29, alpha=2):
-    model = LipNext(inputDim=inputDim, nClasses=nClasses, frameLen=frameLen, alpha=alpha)
-    return model
-
-
 if __name__ == "__main__":
     from time import time
     from torch.autograd import Variable
 
     torch.autograd.set_detect_anomaly(True)
-    model = LipNext(inputDim=256, nClasses=5, frameLen=29, alpha=2, se_block=True, temporal_attention=True)
+    model = LipNext(input_dim=256, nclasses=5, frame_len=29, alpha=2, se_block=True, temporal_attention=True)
 
     inp = torch.zeros(2,1,29,88,88)
 

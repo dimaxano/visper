@@ -2,29 +2,25 @@ import csv
 import os
 from os.path import join
 
+import gin
+import torch
 from torch.utils.data import Dataset
 
-from .preprocess import *
+from .utils import read_video, preprocess
 
+@gin.configurable(blacklist=["phase"])
 class LipreadingDataset(Dataset):
-    """BBC Lip Reading dataset."""
+    def __init__(self, phase, directory=None, labels=None):
+        self.LABELS = labels
+        num_labels = len(labels)
 
-    def get_labels_v2(self, num_labels=5):
-        return ["ABOUT", "PEOPLE", "ACTUALLY", "BECAUSE", "FIRST"]
-    
-
-    def get_labels_lrs2_w(self, directory):
-        labels = os.listdir(directory)
-
-        return labels
-
+        self.label_list, self.file_list = self.build_file_list(directory, phase, num_labels)
 
     def build_file_list(self, directory, phase, num_labels):
-        labels = self.get_labels_v2() #self.get_labels(num_labels=num_labels) # self.get_labels_lrs2_w(directory) # 
+        labels = self.LABELS
         completeList = []
 
         for i, label in enumerate(labels):
-
             dirpath = directory + "/{}/{}".format(label, phase)
 
             files = os.listdir(dirpath)
@@ -37,31 +33,25 @@ class LipreadingDataset(Dataset):
 
         return labels, completeList
 
-
-    def __init__(self, directory, phase, num_labels=20, augment=True):
-        self.label_list, self.file_list = self.build_file_list(directory, phase, num_labels)
-        self.augment = augment
-
     def __len__(self):
         return len(self.file_list)
 
     def __getitem__(self, idx):
         # load video into a tensor
         label, filename = self.file_list[idx]
-        vidframes = load_video(filename)
+        vidframes = read_video(filename)
         if not vidframes:
             print(f"broken video - {filename}")
-        # print(filename)
-        temporalvolume = bbc(vidframes, self.augment)
 
-        sample = {'temporalvolume': temporalvolume, 'label': torch.LongTensor([label])}
+        temporalvolume = preprocess(vidframes)
+
+        sample = {'features': temporalvolume, 'targets': torch.tensor(label, dtype=torch.long)}
 
         return sample
 
 
 if __name__ == "__main__":
-    dtst = LipreadingDataset("/home/dmitry.klimenkov/Documents/datasets/lipreading_datasets/mixed_dataset",
-                            "train")
+    dtst = LipreadingDataset("/home/dmitry.klimenkov/Documents/datasets/lipreading_datasets/LIPS/LRW_gray_122")
 
     from torch.utils.data import DataLoader
     from torch.autograd import Variable

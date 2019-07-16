@@ -2,6 +2,7 @@ import random
 import math
 import numbers
 
+import gin
 import numpy as np
 import torch
 from torch import nn
@@ -9,6 +10,7 @@ from torch.nn import functional as F
 import torchvision.transforms.functional as functional
 
 
+@gin.configurable
 class StatefulRandomCrop(object):
     def __init__(self, insize, outsize):
         self.size = outsize
@@ -47,10 +49,10 @@ class StatefulRandomCrop(object):
     def __repr__(self):
         return self.__class__.__name__ + '(size={0}, padding={1})'.format(self.size, self.padding)
 
-
+@gin.configurable
 class StatefulRandomHorizontalFlip(object):
-    def __init__(self, p=0.5):
-        self.p = p
+    def __init__(self, probability=0.5):
+        self.p = probability
         self.rand = random.random()
 
     def __call__(self, img):
@@ -67,7 +69,7 @@ class StatefulRandomHorizontalFlip(object):
     def __repr__(self):
         return self.__class__.__name__ + '(p={})'.format(self.p)
 
-
+@gin.configurable
 class GaussianSmoothing(nn.Module):
     """
     Apply gaussian smoothing on a

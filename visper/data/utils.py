@@ -6,13 +6,13 @@ import torchvision.transforms.functional as functional
 import torchvision.transforms as transforms
 import torch
 from torch.nn import functional as F
+import gin
 
-from .statefultransforms import StatefulRandomCrop, StatefulRandomHorizontalFlip, GaussianSmoothing
-
+from .transforms.statefultransforms import StatefulRandomCrop, StatefulRandomHorizontalFlip, GaussianSmoothing
 
 def get_video_frames(path, num_channels=3):
     """
-        returns list of RGB, jpg-encoded images
+        Return list of frames (numpy arrays)
     """
     reader = cv2.VideoCapture(path)
 
@@ -53,8 +53,10 @@ def shorten2length(video, lenght=29):
 
 def extend2length(video, lenght=29):
     """
+        Extends video to be of `lenght`
+
         Args:
-            `video`:list of frames
+            `video`:list of frames (numpy arrays)
     """
 
     def_len = len(video)
@@ -87,8 +89,9 @@ def extend2length(video, lenght=29):
     return video
 
 
-def load_video(filename):
-    """Loads the specified video using ffmpeg.
+def read_video(filename, video_len=29):
+    """
+    Reads video. If video length != `video_len`, video will extended or shortened to video_len
 
     Args:
         filename (str): The path to the file to load.
@@ -100,59 +103,58 @@ def load_video(filename):
 
     images = get_video_frames(filename, num_channels=3)
 
-    if len(images) > 29:
+    if len(images) > video_len:
         images = shorten2length(images, lenght=29)
-    elif len(images) < 29:
+    elif len(images) < video_len:
         images = extend2length(images, lenght=29)
     
     if not images:
         return None
 
-    frames = []
-    for image in images:
-        image = functional.to_tensor(image)
-        frames.append(image)
+    frames = [functional.to_tensor(image) for image in images]
     return frames
 
-
-def bbc(vidframes, augmentation=True):
-    """Preprocesses the specified list of frames by center cropping.
-    This will only work correctly on videos that are already centered on the
-    mouth region, such as LRITW.
+@gin.configurable
+def preprocess(
+    vidframes,
+    augmentation=False,
+    augmentations_list = [],
+    src_size=(112, 112),
+    dst_size=(88, 88),
+    video_len=29):
+    """
+    Preprocess input video
 
     Args:
         vidframes (List[FloatTensor]):  The frames of the video as a list of
             3D tensors (channels, width, height)
+        augmentation (Bool): whether to perform augmentations or not
+        augmentations_list: [List[torchvision.Transforms]] - list of augmentations to be apllied
+        src_size (Tuple): w, h of input video
+        dst_size (Tuple): w, h of video after preprocessing (size of model input)
+        video_len (Int): # frames in input video
 
     Returns:
-        FloatTensor: The video as a temporal volume, represented as a 5D tensor
+        FloatTensor: preprocessed video as a temporal volume, represented as a 5D tensor
             (batch, channel, time, width, height)"""
 
-    temporalvolume = torch.FloatTensor(1,29,88,88)
+    src_w, src_h = src_size
+    dst_w, dst_h = dst_size
 
-    croptransform = transforms.CenterCrop((88, 88))
+
+    temporalvolume = torch.FloatTensor(1, video_len, dst_h, dst_w)
+
+    croptransform = transforms.CenterCrop((dst_h, dst_w))
 
     if augmentation:
-        crop = StatefulRandomCrop((112,112), (88, 88))
-        flip = StatefulRandomHorizontalFlip(0.5)
-
-        croptransform = transforms.Compose([
-            crop,
-            flip
-        ])
+        croptransform = transforms.Compose(augmentations_list)
 
     for i in range(0, 29):
-        """ inp = vidframes[i].unsqueeze(0)
-        inp = F.pad(inp, (2, 2, 2, 2), mode='reflect')
-        vidframes[i] = smoothing(inp)[0] """
-
         result = transforms.Compose([
             transforms.ToPILImage(),
-            transforms.Resize(112), # if comes images of size 100,100 - resize operation won't be performed
+            #transforms.Resize(112), # if comes images of size 100,100 - resize operation won't be performed
             croptransform,
             transforms.Grayscale(num_output_channels=1),
-            #transforms.ToTensor(),
-            #transforms.Normalize([0.4161,], [0.1688,]),
         ])(vidframes[i])
 
         numpy_arr = np.array(result)

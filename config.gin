@@ -1,7 +1,14 @@
+#-------------DATASET--------------------
+LipreadingDataset.directory = ("/home/dmitry.klimenkov/Documents/datasets/"
+                    "lipreading_datasets/LIPS/mixed_aligned")
+LipreadingDataset.labels = ("ABOUT", "PEOPLE", "ACTUALLY", "BECAUSE", "FIRST")
+
+
 #-------------MAIN PARAMS--------------------
+main.experiment_name = "Mobi-VSR-5W-mixed_aligned"
+
 # directories
-main.log_dir = "./logdir"
-main.dataset_dir = ""
+main.log_dir = "./logdir/"
 
 # training
 main.num_epochs = 40
@@ -10,20 +17,35 @@ main.lr = 1e-3
 main.val_batch_size_multiplier = 2
 main.weight_decay = 0
 
-# data
-main.num_labels = 5
-main.augment = True
+
+# model
+main.class_weight = @get_class_weight()
 
 # misc
 main.num_workers = 4
+main.check = False
+main.verbose = True
 
 
 #-------------MODEL PARAMS--------------------
 LipNext.input_dim = 256
 LipNext.nclasses = 5
-LipNext.frameLen = 29
+LipNext.frame_len = 29
 LipNext.alpha = 2
 LipNext.se_block = True
-LipNext.temporal_attention = True
+LipNext.temporal_attention = False
 
 
+#-------------PREPROCESS--------------------
+preprocess.augmentation = True
+preprocess.src_size = (112, 112)
+preprocess.dst_size = (88, 88)
+preprocess.video_len = 29
+preprocess.augmentations_list = [
+    @StatefulRandomCrop(),
+    @StatefulRandomHorizontalFlip()
+]
+StatefulRandomCrop.insize = (112, 112)
+StatefulRandomCrop.outsize = (88, 88)
+
+StatefulRandomHorizontalFlip.probability = 0.5
