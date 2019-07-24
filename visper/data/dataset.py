@@ -1,6 +1,5 @@
 import csv
 import os
-from os.path import join
 
 import gin
 import torch
@@ -13,6 +12,7 @@ class LipreadingDataset(Dataset):
     def __init__(self, phase, directory=None, labels=None):
         self.LABELS = labels
         num_labels = len(labels)
+        self.directory = directory
 
         self.label_list, self.file_list = self.build_file_list(directory, phase, num_labels)
 
@@ -21,7 +21,7 @@ class LipreadingDataset(Dataset):
         completeList = []
 
         for i, label in enumerate(labels):
-            dirpath = directory + "/{}/{}".format(label, phase)
+            dirpath = directory + f"/{label}/{phase}"
 
             files = os.listdir(dirpath)
 
@@ -45,21 +45,29 @@ class LipreadingDataset(Dataset):
 
         temporalvolume = preprocess(vidframes)
 
-        sample = {'features': temporalvolume, 'targets': torch.tensor(label, dtype=torch.long)}
+        sample = {
+            "features": temporalvolume,
+            "targets": torch.tensor(label, dtype=torch.long),
+            "filenames": filename
+        }
 
         return sample
 
 
 if __name__ == "__main__":
-    dtst = LipreadingDataset("/home/dmitry.klimenkov/Documents/datasets/lipreading_datasets/LIPS/LRW_gray_122")
+    dtst = LipreadingDataset(directory="/home/dmitry.klimenkov/Documents/datasets/lipreading_datasets/LIPS/mixed_aligned",
+                            phase="train",
+                            labels=["ABOUT", "PEOPLE", "ACTUALLY", "BECAUSE", "FIRST"])
 
     from torch.utils.data import DataLoader
     from torch.autograd import Variable
     ldr = DataLoader(dtst, batch_size=7, shuffle=True)
 
     for i_batch, sample_batched in enumerate(ldr):
-        inputt = Variable(sample_batched['temporalvolume'])
-        labels = Variable(sample_batched['label'])
+        inputt = Variable(sample_batched['features'])
+        labels = Variable(sample_batched['targets'])
+
+        ff = Path(sample_batched["filenames"][0])
 
         #print(inputt.size())
         #print(labels.size())
